@@ -5,6 +5,7 @@ from flask import request
 app = Flask(__name__)
 
 try:
+    #TODO implement secrets manager
     cnx = mysql.connector.connect(user='root', password='f5TuBZtZYZqWTopEXGyu',
                                   host='localhost',
                                   database='car-rentals')
@@ -50,7 +51,7 @@ def add_cust():
         data[column] = field
     cursor.close()
 
-    #business validations
+    #business validations (worthwhile to pull into their own procedure)
     out = ""
     if "email" in data or "phone" in data or "address" in data:
         pass
@@ -74,6 +75,7 @@ def add_cust():
         i += 1
     query += vals + ")"
 
+    #run insert
     cursor = cnx.cursor(buffered=True)
     cursor.execute(query, data)
     cust_id = cursor.lastrowid
@@ -96,7 +98,7 @@ def update_cust():
     else:
         cust_id = request.args.get('id', '')
     if cust_id is None or cust_id == '':
-        return "<p>You must supply a customer id.</p>"
+        return "You must supply a customer id."
 
     # get the columns in the customer table to help find the data we care about
     cursor = cnx.cursor(buffered=True)
@@ -140,7 +142,7 @@ def delete_cust():
     else:
         cust_id = request.args.get('id', '')
     if cust_id is None or cust_id == '':
-        return "<p>You must supply a customer id.</p>"
+        return "You must supply a customer id."
 
     #check for existence
     cursor = cnx.cursor(buffered=True)
@@ -148,7 +150,7 @@ def delete_cust():
     cursor.execute(query, [cust_id,])
     if cursor.rowcount != 1:
         cursor.close()
-        return "<p>Unable to locate customer with that ID</p>"
+        return "Unable to locate customer with that ID"
     cursor.close()
 
     #delete
@@ -169,7 +171,7 @@ def get_cust():
     else:
         cust_id = request.args.get('id', '')
     if cust_id is None or cust_id == '':
-        return "<p>You must supply a customer id.</p>"
+        return "You must supply a customer id."
 
     cursor = cnx.cursor(buffered=True)
     query = "select * from customer c where c.id = %s"
@@ -183,6 +185,9 @@ def get_cust():
 
 @app.route("/")
 def get_all_custs():
+    '''not in the requirements, but left in for convenience
+    
+    '''
     cursor = cnx.cursor(buffered=True)
     query = "select * from customer"
     cursor.execute(query)
