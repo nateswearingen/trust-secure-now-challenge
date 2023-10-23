@@ -1,7 +1,6 @@
-from flask import appcontext_tearing_down
-import signal
 import mysql.connector
 from flask import Flask
+from flask import request
 app = Flask(__name__)
 
 try:
@@ -14,41 +13,54 @@ except mysql.connector.Error as err:
 else:
     print("Connection established!")
 
+
 def close_db_connection(sender, **extra):
     print("Closing DB Connection")
     cnx.close()
 
-@app.post("/add_cust")
+
+@app.route("/add_cust", methods=['POST', 'GET'])
 def add_cust():
     #TODO
     return
-@app.post("/update_cust")
+
+
+@app.route("/update_cust", methods=['POST', 'GET'])
 def update_cust():
     #TODO
     return
-@app.post("/delete_cust")
+
+
+@app.route("/delete_cust", methods=['POST', 'GET'])
 def delete_cust():
     #TODO
     return
-@app.get("/get_cust")
+
+
+@app.route("/get_cust")
 def get_cust():
+    print(request)
     cursor = cnx.cursor()
-    query = "select * from customer c where c.id = "
-    id = request.form['id']
-    if id == None:
-        id = request.args.get('id', '')
-    cursor.execute(query, id)
-    out = ""
-    for t in cursor:
-        out += "<p>" + str(t) + "</p>"
+    query = "select * from customer c where c.id = %s"
+    if id in request.form:
+        cust_id = request.form['id']
+    cust_id = request.args.get('id', '')
+    if cust_id is None or cust_id == '':
+        return "<p>You must supply a customer id.</p>"
+    print(query, cust_id)
+    cursor.execute(query, [cust_id,])
+    out = []
+    for data in cursor:
+        out.append(dict(zip([x[0] for x in cursor.description], data)))
     return out
+
 
 @app.route("/")
 def get_all_custs():
     cursor = cnx.cursor()
     query = "select * from customer"
     cursor.execute(query)
-    out = ""
-    for t in cursor:
-        out += "<p>" + str(t) + "</p>"
+    out = []
+    for data in cursor:
+        out.append(dict(zip([x[0] for x in cursor.description], data)))
     return out
