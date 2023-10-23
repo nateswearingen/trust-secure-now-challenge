@@ -64,29 +64,72 @@ def add_cust():
     #build insert string
     query = "Insert into customer ("
     vals = ") values ("
-    #vulnerable to SQL injection attack (out of time to rework)
     i = 0
     for k, v in data.items():
         if i > 0:
             query += ", "
             vals += ", "
         query += k
-        vals += v
+        vals += "%(" + k + ")s"
         i += 1
     query += vals + ")"
 
     cursor = cnx.cursor(buffered=True)
-    cursor.execute(query)
+    cursor.execute(query, data)
+    cust_id = cursor.lastrowid
     cnx.commit()
-    out = str(cursor.rowcount) + " record(s) added."
+    out = str(cursor.rowcount) + " record(s) added. Customer id is " + str(cust_id)
     cursor.close()
     return out
 
 
 @app.route("/update_cust", methods=['POST', 'GET'])
 def update_cust():
-    #TODO
-    return
+    ''' Api for updating a customer
+    Extra fields are ignored.
+
+    This currently doesn't support json inputs, but it needs to
+    '''
+    #fetch id
+    if 'id' in request.form:
+        cust_id = request.form['id']
+    else:
+        cust_id = request.args.get('id', '')
+    if cust_id is None or cust_id == '':
+        return "<p>You must supply a customer id.</p>"
+
+    # get the columns in the customer table to help find the data we care about
+    cursor = cnx.cursor(buffered=True)
+    query = "select * from customer c limit 1"
+    cursor.execute(query)
+    data = {}
+    for column, data_type in [(x[0], x[1]) for x in cursor.description]:
+        if column in request.form:
+            field = request.form[column]
+        else:
+            field = request.args.get(column, '')
+        if field is None or field == '':
+            continue
+        data[column] = field
+    cursor.close()
+
+    #run the update
+    query = "Update customer set"
+    i = 0
+    for f in data.keys():
+        if f == "id":
+            continue
+        if i > 0:
+            query += ","
+        query += " " + f + " = %(" + f + ")s"
+        i += 1
+    query += " where id = %(id)s"
+    cursor = cnx.cursor(buffered=True)
+    cursor.execute(query, data)
+    cnx.commit()
+    out = str(cursor.rowcount) + " record(s) updated."
+    cursor.close()
+    return out
 
 
 @app.route("/delete_cust", methods=['POST', 'GET'])
