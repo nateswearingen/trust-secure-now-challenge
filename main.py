@@ -33,34 +33,58 @@ def update_cust():
 
 @app.route("/delete_cust", methods=['POST', 'GET'])
 def delete_cust():
-    #TODO
-    return
-
-
-@app.route("/get_cust")
-def get_cust():
-    print(request)
-    cursor = cnx.cursor()
-    query = "select * from customer c where c.id = %s"
+    #fetch id
     if id in request.form:
         cust_id = request.form['id']
     cust_id = request.args.get('id', '')
     if cust_id is None or cust_id == '':
         return "<p>You must supply a customer id.</p>"
-    print(query, cust_id)
+
+    #check for existence
+    cursor = cnx.cursor(buffered=True)
+    query = "select 1 from customer c where c.id = %s"
+    cursor.execute(query, [cust_id,])
+    if cursor.rowcount != 1:
+        cursor.close()
+        return "<p>Unable to locate customer with that ID</p>"
+    cursor.close()
+
+    #delete
+    cursor = cnx.cursor(buffered=True)
+    query = "delete from customer c where c.id = %s"
+    cursor.execute(query, [cust_id,])
+    cnx.commit()
+    out = str(cursor.rowcount) + " record deleted."
+    cursor.close()
+    return out
+
+
+@app.route("/get_cust")
+def get_cust():
+    #fetch id
+    if id in request.form:
+        cust_id = request.form['id']
+    cust_id = request.args.get('id', '')
+    if cust_id is None or cust_id == '':
+        return "<p>You must supply a customer id.</p>"
+
+    cursor = cnx.cursor(buffered=True)
+    query = "select * from customer c where c.id = %s"
     cursor.execute(query, [cust_id,])
     out = []
     for data in cursor:
         out.append(dict(zip([x[0] for x in cursor.description], data)))
+    cursor.close()
     return out
 
 
 @app.route("/")
 def get_all_custs():
-    cursor = cnx.cursor()
+    cursor = cnx.cursor(buffered=True)
     query = "select * from customer"
     cursor.execute(query)
     out = []
     for data in cursor:
         out.append(dict(zip([x[0] for x in cursor.description], data)))
+    cursor.close()
     return out
